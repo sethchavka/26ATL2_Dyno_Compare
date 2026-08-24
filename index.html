@@ -128,17 +128,8 @@ footer{margin-top:56px;padding-top:24px;border-top:1px solid var(--line);font-fa
 footer b{color:var(--dim)}
 .hidden{display:none}
 
-/* SHR toggle */
-.shr-bar{margin-top:10px}
-.shr-toggle{display:inline-flex;align-items:center;gap:8px;font-family:var(--cond);font-size:13px;font-weight:600;
-  letter-spacing:.06em;text-transform:uppercase;color:var(--dim);cursor:pointer;user-select:none}
-.shr-toggle:hover{color:var(--ink)}
-.shr-box{width:16px;height:16px;border-radius:4px;border:1.5px solid var(--line2);background:transparent;
-  display:inline-flex;align-items:center;justify-content:center;transition:.15s}
-.shr-toggle.on .shr-box{background:var(--accent);border-color:var(--accent)}
-.shr-toggle.on .shr-box::after{content:"✓";color:var(--bg);font-size:11px;font-weight:800;line-height:1}
-.shr-toggle.on{color:var(--ink)}
-.tab.shr-hidden{display:none}
+/* SHR cars are hidden from the dashboard */
+.tab.shr-car{display:none}
 .alt-flag{display:inline-block;margin-left:7px;padding:1px 6px;border-radius:3px;font-family:var(--cond);
   font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
   color:var(--red);border:1px solid var(--red);opacity:.85;vertical-align:middle}
@@ -198,7 +189,7 @@ body.locked{overflow:hidden}
     <h1>Chassis Dyno <span class="u">Compare</span></h1>
     <select id="event-select" class="event-select"></select>
     <div class="tabs" id="tabs"></div>
-    <div class="shr-bar" id="shr-bar"><label class="shr-toggle" id="shr-toggle"><span class="shr-box"></span>Show SHR cars (24, 26)</label></div>
+    
   </div>
 </header>
 
@@ -247,7 +238,7 @@ const carNum=S=>S.title.split(' ')[0];
 const isSHR=S=>SHR_CARS.has(carNum(S));
 // SHR cars were never run with the alternator off — flag so the compare view stays honest
 const altOff=S=>!isSHR(S);
-let showSHR=true;
+const showSHR=false;  // SHR cars are always hidden from the dashboard
 const visibleSets=()=>SETS.filter(S=>showSHR||!isSHR(S));
 // Speed-band overlays on the compare chart, per event (bands shift with the track's speed range).
 // Each band can be toggled on/off; visibility persists across re-renders and event switches by key.
@@ -309,38 +300,16 @@ EVENTS.forEach((e,i)=>{
   if(i===activeEvent) o.selected=true;
   eventSelect.appendChild(o);
 });
-// Does the active event have any SHR cars? Controls whether the SHR toggle shows.
-const eventHasSHR=()=>SETS.some(isSHR);
 function switchEvent(i){
   activeEvent=i;
   C=EVENTS[i]; SETS=C.sets;
   BANDS=buildBands();             // bands shift to the new event's track ranges
   view={mode:'compare'};          // land on compare for the new event
   buildTabs();
-  applySHRVisibility();
   render();
 }
 eventSelect.onchange=()=>switchEvent(+eventSelect.value);
 
-// ---- SHR show/hide toggle ----
-const shrToggle=document.getElementById('shr-toggle');
-const shrBar=document.getElementById('shr-bar');
-function applySHRVisibility(){
-  const has=eventHasSHR();
-  if(shrBar) shrBar.style.display=has?'':'none';   // hide the control entirely when no SHR cars
-  if(!has) showSHR=true;                            // nothing to hide; keep state clean
-  shrToggle.classList.toggle('on',showSHR);
-  [...tabs.children].forEach((t,i)=>{
-    if(i<SETS.length && isSHR(SETS[i])) t.classList.toggle('shr-hidden',!showSHR);
-  });
-}
-shrToggle.onclick=()=>{
-  showSHR=!showSHR;
-  applySHRVisibility();
-  // if the currently open set tab was just hidden, fall back to compare
-  if(!showSHR && view.mode==='set' && isSHR(SETS[view.set])) view={mode:'compare'};
-  render();
-};
 
 function setActiveTab(){
   [...tabs.children].forEach((t,i)=>{
@@ -631,7 +600,6 @@ const gate=document.getElementById('gate'), gInput=document.getElementById('gate
 function unlock(){
   gate.classList.add('hidden');
   document.body.classList.remove('locked');
-  applySHRVisibility(); // set toggle + tab visibility before first render
   render(); // build the page only after unlock
 }
 // Already unlocked this session? Skip the gate.
